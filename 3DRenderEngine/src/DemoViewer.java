@@ -58,22 +58,56 @@ public class DemoViewer {
                 //Dividing the 2 gets us the center point.
                 //translate method shifts the entire coordinatew system by this amount so (0,0) is now the center of the screen instead of top left corner.
                 //This will allow us to see the shape better.
-                g2.setColor(Color.WHITE); //Triangles will be drawn in white.
-                for (Triangle t : tris) //Starts a loop iterating over each Triangle object in the tris arraylist.
+          
+
+                //Heading Slider (bottom slider): Controls rotation in XZ plane (left-right)
+                //Pitch Slider (right side slider): Controls rotation in YZ plane (up-down)
+                double heading = Math.toRadians(headingSlider.getValue()); //This line reads the current value of 'headingSlider' which controls left-right rotation.
+                //The 'getValue' method retrieves the slider's current value, which is in degrees.
+                //'Math.toRadians' converts the degree value into radians since trig functions use radians.
+                Matrix3 headingTransform = new Matrix3(new double[] { //initializes a new rotation matrix. The values of the matrix correspond to the XZ rotation matrix.
+                    Math.cos(heading), 0, Math.sin(heading),
+                    0, 1, 0,
+                    -Math.sin(heading), 0, Math.cos(heading)
+                }); //This matrix handles the rotation of the Y-acis, which affects the X and Z coordinates while leaving the Y unchanged.
+
+                double pitch = Math.toRadians(pitchSlider.getValue()); //This line reads the current value of 'pitchSlider' which controls the up-down rotation.
+                Matrix3 pitchTransform = new Matrix3(new double[] { //Initializes a new rotation matrix. The values of the matrix correspond to the YZ rotation matrix.
+                    1, 0, 0,
+                    0, Math.cos(pitch), Math.sin(pitch),
+                    0, -Math.sin(pitch), Math.cos(pitch)
+                });
+
+                Matrix3 transform = headingTransform.multiply(pitchTransform); //Creates a matrix named transform which represents the two matrices being multiplied by eachother. (headingTransform * pitchTransform)
+                //This new 'transform' matrix applies both XZ and YZ rotation matrices into once matrix. 
+
+
+
+                g2.setColor(Color.WHITE); //Sets color of lines to be drawn white.
+                for (Triangle t : tris)
                 {
-                    Path2D path = new Path2D.Double(); //Creates a Path2D object which will help us outline the triangle.
-                    path.moveTo(t.v1.x, t.v1.y); //This moves the pen to the starting point of the triangles first vertex.
-                    //moveTo(x,y) sets the starting point for the drawing without drawing anything yet.
-                    //The coordinates t.v1.x and t.v1.y get the first vertex x and y of the triangle t.
-                    //Since we are using orthographic projection, we dont need z yet.
-                    path.lineTo(t.v2.x, t.v2.y); //Draws a straight line from current point to specified (x,y) point. Line from 1 vertex to another.
-                    path.lineTo(t.v3.x, t.v3.y); //Draws a line from the second vertex to the third vertex of the triangle.
-                    path.closePath(); //Draws a line from the current point (last point) to the first point. Completes the outline for the triangle.
-                    g2.draw(path); //Draws the completes path on the screen.
+                    Vertex v1 = transform.transform(t.v1); //Applies rotation matrix to first vertex 'v1' of triangle 't', transforming it according to the current rotation of angle ('heading')
+                    Vertex v2 = transform.transform(t.v2); //same as above, transforms vertex into newly rotated vertex.
+                    Vertex v3 = transform.transform(t.v3);
+                    Path2D path = new Path2D.Double(); //Creates a new Path2D object to draw the triangle.
+                    path.moveTo(v1.x, v1.y); //Moves to the first new vertex that was just created.
+                    path.lineTo(v2.x, v2.y); //Draws a line to the second vertex. (we are at the first vertex rn)
+                    path.lineTo(v3.x, v3.y); //Draws a line to third vertex.
+                    path.closePath(); //Closes the path, forming the triangle. Essentially this draws the line from the current point to the first point, completing the triangle.
+                    g2.draw(path); //Draws the trangle outline on the screen.
                 }
             }
         };
         pane.add(renderPanel, BorderLayout.CENTER); //Adds the render panel to the center of the window.
+
+        //A change listener in java is a type of event listener that responds to changes in a component's state. In this case, it's used with sliders to detect when the slider's value changes.
+        headingSlider.addChangeListener(e -> renderPanel.repaint()); //headingSlider is the slider that controls the left right rotation. 'addChangeListener' attaches a change listener to this slider.
+        //Whenever the slider's value changes, the code inside the listener will be executed.
+        //'e -> renderPanel.repaint' is a lambda expression. Its a short way of writing a method that takes an event 'e' as input and then calls 'renderPanel.repaint()'.
+        //'e' is the event object representing the change event (the slider being moved).
+        //'renderPanel.repaint()' is a method that redraws the renderpanel (everything displayed on screen). This will redraw the screen with the new vertices being applied.
+        pitchSlider.addChangeListener(e -> renderPanel.repaint());
+
         frame.setSize(400, 400);
         frame.setVisible(true);
 
